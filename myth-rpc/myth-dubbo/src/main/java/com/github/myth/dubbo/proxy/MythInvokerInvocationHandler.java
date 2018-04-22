@@ -10,7 +10,7 @@ import com.github.myth.common.exception.MythRuntimeException;
 import com.github.myth.common.utils.DefaultValueUtils;
 import com.github.myth.core.concurrent.threadlocal.TransactionContextLocal;
 import com.github.myth.core.helper.SpringBeanUtils;
-import com.github.myth.core.service.impl.MythTransactionManager;
+import com.github.myth.core.service.engine.MythTransactionEngine;
 
 import java.lang.reflect.Method;
 import java.util.Objects;
@@ -48,9 +48,9 @@ public class MythInvokerInvocationHandler extends InvokerInvocationHandler {
                         buildParticipant(mythTransactionContext, myth,
                                 method, clazz, args, arguments);
                 if (Objects.nonNull(participant)) {
-                    final MythTransactionManager mythTransactionManager =
-                            SpringBeanUtils.getInstance().getBean(MythTransactionManager.class);
-                    mythTransactionManager.registerParticipant(participant);
+                    final MythTransactionEngine mythTransactionEngine =
+                            SpringBeanUtils.getInstance().getBean(MythTransactionEngine.class);
+                    mythTransactionEngine.registerParticipant(participant);
                 }
 
                 return super.invoke(target, method, args);
@@ -82,7 +82,14 @@ public class MythInvokerInvocationHandler extends InvokerInvocationHandler {
                     method.getName(),
                     args, arguments);
 
-            final String destination = myth.destination();
+
+            //有tags的消息队列的特殊处理
+            final String destination;
+            if( Objects.nonNull(myth.tags()) && myth.tags().length() > 0 ){
+                destination = myth.destination()+","+myth.tags();
+            }else{
+                destination = myth.destination();
+            }
 
             final Integer pattern = myth.pattern().getCode();
 
